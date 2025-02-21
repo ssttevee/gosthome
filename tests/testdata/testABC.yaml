@@ -1,0 +1,30 @@
+esphome:
+  name: test-abc
+
+host:
+  mac_address: "12:b7:3d:ab:54:c7"
+
+api:
+  encryption:
+    key: "M8paC2Ku3u39BrEg5M50gUCk9ah5z48lJjxCjsaTMDA="
+
+logger:
+
+demo:
+  binary_sensors:
+    - id: demo_basement_floor_wet
+      name: Demo Basement Floor Wet
+      device_class: moisture
+    - id: demo_movement_backyard
+      name: Demo Movement Backyard
+      device_class: motion
+
+alarm_control_panel:
+  - platform: template
+    name: Alarm Panel
+    codes:
+      - "1234"
+    binary_sensors:
+      - input: demo_basement_floor_wet
+      - input: demo_movement_backyard
+        bypass_armed_home: true

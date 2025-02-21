@@ -1,0 +1,6 @@
+venv
+pyrightconfig.json
+/gosthome*
+/dist
+.esphome
+.venv.init.log
