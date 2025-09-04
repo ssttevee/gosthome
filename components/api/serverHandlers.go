@@ -12,6 +12,9 @@ import (
 	ehp "github.com/gosthome/gosthome/components/api/esphomeproto"
 	"github.com/gosthome/gosthome/components/api/frameshakers"
 	"github.com/gosthome/gosthome/components/button"
+	"github.com/gosthome/gosthome/components/climate"
+	"github.com/gosthome/gosthome/components/number"
+	"github.com/gosthome/gosthome/components/switchcomp"
 	"github.com/gosthome/gosthome/core"
 	"github.com/gosthome/gosthome/core/bus"
 	"github.com/gosthome/gosthome/core/entity"
@@ -210,12 +213,6 @@ var (
 					Icon:              typed.Icon(),
 					DeviceClass:       string(typed.DeviceClass()),
 				})
-			case entity.Service:
-				ret = append(ret, &ehp.ListEntitiesServicesResponse{
-					Key:  typed.HashID(),
-					Name: typed.Name(),
-					Args: nil, // TODO: fill
-				})
 			case entity.Camera:
 				ret = append(ret, &ehp.ListEntitiesCameraResponse{
 					ObjectId:          typed.ID(),
@@ -227,7 +224,7 @@ var (
 					Icon:              typed.Icon(),
 				})
 			case entity.Climate:
-				ret = append(ret, &ehp.ListEntitiesClimateResponse{
+				res := ehp.ListEntitiesClimateResponse{
 					ObjectId:          typed.ID(),
 					Key:               typed.HashID(),
 					DisabledByDefault: typed.DisabledByDefault(),
@@ -235,7 +232,93 @@ var (
 					Name:              typed.Name(),
 					UniqueId:          node.DefaultUniqueId(t, typed),
 					Icon:              typed.Icon(),
-				})
+				}
+
+				if c, ok := typed.(interface{ SupportsCurrentTemperature() bool }); ok {
+					res.SupportsCurrentTemperature = c.SupportsCurrentTemperature()
+				}
+
+				if c, ok := typed.(interface{ SupportsTwoPointTargetTemperature() bool }); ok {
+					res.SupportsTwoPointTargetTemperature = c.SupportsTwoPointTargetTemperature()
+				}
+
+				if c, ok := typed.(interface{ SupportedModes() []entity.ClimateMode }); ok {
+					for _, mode := range c.SupportedModes() {
+						res.SupportedModes = append(res.SupportedModes, common.Enum[ehp.ClimateMode](mode))
+					}
+				}
+
+				if c, ok := typed.(interface{ VisualMinTemperature() float32 }); ok {
+					res.VisualMinTemperature = c.VisualMinTemperature()
+				}
+
+				if c, ok := typed.(interface{ VisualMaxTemperature() float32 }); ok {
+					res.VisualMaxTemperature = c.VisualMaxTemperature()
+				}
+
+				if c, ok := typed.(interface{ VisualTargetTemperatureStep() float32 }); ok {
+					res.VisualTargetTemperatureStep = c.VisualTargetTemperatureStep()
+				}
+
+				if c, ok := typed.(interface{ LegacySupportsAway() bool }); ok {
+					res.LegacySupportsAway = c.LegacySupportsAway()
+				}
+
+				if c, ok := typed.(interface{ SupportsAction() bool }); ok {
+					res.SupportsAction = c.SupportsAction()
+				}
+
+				if c, ok := typed.(interface {
+					SupportedFanModes() []entity.ClimateFanMode
+				}); ok {
+					for _, mode := range c.SupportedFanModes() {
+						res.SupportedFanModes = append(res.SupportedFanModes, common.Enum[ehp.ClimateFanMode](mode))
+					}
+				}
+
+				if c, ok := typed.(interface {
+					SupportedSwingModes() []entity.ClimateSwingMode
+				}); ok {
+					for _, mode := range c.SupportedSwingModes() {
+						res.SupportedSwingModes = append(res.SupportedSwingModes, common.Enum[ehp.ClimateSwingMode](mode))
+					}
+				}
+
+				if c, ok := typed.(interface{ SupportedCustomFanModes() []string }); ok {
+					res.SupportedCustomFanModes = c.SupportedCustomFanModes()
+				}
+
+				if c, ok := typed.(interface{ SupportedPresets() []entity.ClimatePreset }); ok {
+					for _, preset := range c.SupportedPresets() {
+						res.SupportedPresets = append(res.SupportedPresets, common.Enum[ehp.ClimatePreset](preset))
+					}
+				}
+
+				if c, ok := typed.(interface{ SupportedCustomPresets() []string }); ok {
+					res.SupportedCustomPresets = c.SupportedCustomPresets()
+				}
+
+				if c, ok := typed.(interface{ VisualCurrentTemperatureStep() float32 }); ok {
+					res.VisualCurrentTemperatureStep = c.VisualCurrentTemperatureStep()
+				}
+
+				if c, ok := typed.(interface{ SupportsCurrentHumidity() bool }); ok {
+					res.SupportsCurrentHumidity = c.SupportsCurrentHumidity()
+				}
+
+				if c, ok := typed.(interface{ SupportsTargetHumidity() bool }); ok {
+					res.SupportsTargetHumidity = c.SupportsTargetHumidity()
+				}
+
+				if c, ok := typed.(interface{ VisualMinHumidity() float32 }); ok {
+					res.VisualMinHumidity = c.VisualMinHumidity()
+				}
+
+				if c, ok := typed.(interface{ VisualMaxHumidity() float32 }); ok {
+					res.VisualMaxHumidity = c.VisualMaxHumidity()
+				}
+
+				ret = append(ret, &res)
 			case entity.Number:
 				ret = append(ret, &ehp.ListEntitiesNumberResponse{
 					ObjectId:          typed.ID(),
@@ -247,6 +330,10 @@ var (
 					Icon:              typed.Icon(),
 					DeviceClass:       string(typed.DeviceClass()),
 					UnitOfMeasurement: typed.UnitOfMeasurement(),
+					MinValue:          typed.MinValue(),
+					MaxValue:          typed.MaxValue(),
+					Step:              typed.Step(),
+					Mode:              ehp.NumberMode(typed.NumberMode()),
 				})
 			case entity.Date:
 				ret = append(ret, &ehp.ListEntitiesDateResponse{
@@ -374,6 +461,12 @@ var (
 					Icon:              typed.Icon(),
 					DeviceClass:       string(typed.DeviceClass()),
 				})
+			case entity.Service:
+				ret = append(ret, &ehp.ListEntitiesServicesResponse{
+					Key:  typed.HashID(),
+					Name: typed.Name(),
+					Args: nil, // TODO: fill
+				})
 			default:
 			}
 		}
@@ -433,7 +526,10 @@ var (
 		return nil, nil
 	}))
 	_ = dH(Handler(func(ctx context.Context, c *Connection, msg *ehp.SwitchCommandRequest) ([]ehp.EsphomeMessageTyper, error) {
-		slog.Warn("gosthome Node got command switch_command, doing nothing")
+		core.GetNode(ctx).Bus.CallService(&switchcomp.SetState{
+			Key:   msg.Key,
+			State: msg.State,
+		})
 		return nil, nil
 	}))
 	_ = dH(Handler(func(ctx context.Context, c *Connection, msg *ehp.CameraImageRequest) ([]ehp.EsphomeMessageTyper, error) {
@@ -441,11 +537,38 @@ var (
 		return nil, nil
 	}))
 	_ = dH(Handler(func(ctx context.Context, c *Connection, msg *ehp.ClimateCommandRequest) ([]ehp.EsphomeMessageTyper, error) {
-		slog.Warn("gosthome Node got command climate_command, doing nothing")
+		core.GetNode(ctx).Bus.CallService(&climate.SetState{
+			Key:                      msg.Key,
+			HasMode:                  msg.HasMode,
+			Mode:                     entity.ClimateMode(msg.Mode),
+			HasTargetTemperature:     msg.HasTargetTemperature,
+			TargetTemperature:        msg.TargetTemperature,
+			HasTargetTemperatureLow:  msg.HasTargetTemperatureLow,
+			TargetTemperatureLow:     msg.TargetTemperatureLow,
+			HasTargetTemperatureHigh: msg.HasTargetTemperatureHigh,
+			TargetTemperatureHigh:    msg.TargetTemperatureHigh,
+			HasLegacyAway:            msg.HasLegacyAway,
+			LegacyAway:               msg.LegacyAway,
+			HasFanMode:               msg.HasFanMode,
+			FanMode:                  entity.ClimateFanMode(msg.FanMode),
+			HasSwingMode:             msg.HasSwingMode,
+			SwingMode:                entity.ClimateSwingMode(msg.SwingMode),
+			HasCustomFanMode:         msg.HasCustomFanMode,
+			CustomFanMode:            msg.CustomFanMode,
+			HasPreset:                msg.HasPreset,
+			Preset:                   entity.ClimatePreset(msg.Preset),
+			HasCustomPreset:          msg.HasCustomPreset,
+			CustomPreset:             msg.CustomPreset,
+			HasTargetHumidity:        msg.HasTargetHumidity,
+			TargetHumidity:           msg.TargetHumidity,
+		})
 		return nil, nil
 	}))
 	_ = dH(Handler(func(ctx context.Context, c *Connection, msg *ehp.NumberCommandRequest) ([]ehp.EsphomeMessageTyper, error) {
-		slog.Warn("gosthome Node got command number_command, doing nothing")
+		core.GetNode(ctx).Bus.CallService(&number.SetValue{
+			Key:   msg.Key,
+			State: msg.State,
+		})
 		return nil, nil
 	}))
 	_ = dH(Handler(func(ctx context.Context, c *Connection, msg *ehp.SelectCommandRequest) ([]ehp.EsphomeMessageTyper, error) {

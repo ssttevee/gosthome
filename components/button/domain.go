@@ -30,6 +30,19 @@ func NewConfig() *Config {
 	}
 }
 
+// RegisterServiceCallHandlers registers service call handlers for the button domain.
+func RegisterServiceCallHandlers(ctx context.Context, domain *entity.ButtonDomain, b *bus.Bus) {
+	// Handle button.press service calls.
+	b.HandleServiceCalls(bus.ServiceHandlerWithRespose(b, func(t *ButtonPress) error {
+		button, ok := domain.FindByKey(t.Key)
+		if !ok {
+			slog.Error("Tried to press nonexisting button", "key", t.Key)
+			return fmt.Errorf("tried to press nonexisting button %d", t.Key)
+		}
+		return button.Press(ctx)
+	}))
+}
+
 type ButtonPress struct {
 	Key uint32
 }
@@ -72,14 +85,9 @@ func New(ctx context.Context, c *Config) ([]component.Component, error) {
 	if b == nil {
 		panic("No bus in config during button initialization")
 	}
-	b.HandleServiceCalls(bus.ServiceHandlerWithRespose(b, func(t *ButtonPress) error {
-		button, ok := domain.FindByKey(t.Key)
-		if !ok {
-			slog.Error("Tried to press nonexisting button", "key", t.Key)
-			return fmt.Errorf("tried to press nonexisting button %d", t.Key)
-		}
-		return button.Press(ctx)
-	}))
+
+	RegisterServiceCallHandlers(ctx, domain, b)
+
 	return ret, nil
 }
 

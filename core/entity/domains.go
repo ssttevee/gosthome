@@ -415,6 +415,7 @@ type Switch interface {
 	WithState[SwitchState]
 	WithIcon
 	WithDeviceClass[SwitchDeviceClass, *SwitchDeviceClass]
+	SetState(context.Context, bool) error
 }
 
 // ==================	Button		=============================================
@@ -496,8 +497,12 @@ func (*CameraDomain) DomainType() DomainType {
 	return DomainTypeCamera
 }
 
+type CameraState struct {
+}
+
 type Camera interface {
 	EntityComponent
+	WithState[CameraState]
 	WithIcon
 }
 
@@ -546,6 +551,7 @@ type Climate interface {
 	EntityComponent
 	WithState[ClimateState]
 	WithIcon
+	SetState(context.Context, ClimateState) error
 }
 
 // ENUM(auto,box,slider)
@@ -575,6 +581,10 @@ type Number interface {
 	WithDeviceClass[NumberDeviceClass, *NumberDeviceClass]
 	WithUnitOfMeasurement
 	NumberMode() NumberMode
+	MinValue() float32
+	MaxValue() float32
+	Step() float32
+	SetValue(context.Context, float32) error
 }
 
 // ==================	Date		=============================================
